@@ -73,7 +73,7 @@ test = [
 select = ["E4", "E7", "E9", "F", "D", "UP"]
 
 [tool.ruff.lint.pydocstyle]
-convention = "google"
+convention = "numpy"
 
 [project.urls]
 Homepage = "https://github.com/lmmx/czkawka"
@@ -83,6 +83,8 @@ Repository = "https://github.com/lmmx/czkawka.git"
 features = [
   "pyo3/extension-module"
 ]
+module-name = "czkawka._czkawka"
+python-source = "python"
 
 [tool.uv]
 # Build Rust code in development mode (faster builds)

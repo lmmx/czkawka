@@ -2,9 +2,8 @@
 
 from pathlib import Path
 
-import pytest
-
 import czkawka
+import pytest
 
 
 def test_compute_distances_basic(real_test_images):
@@ -27,8 +26,8 @@ def test_compute_distances_basic(real_test_images):
 
     # Check structure
     for path_a, path_b, distance in results:
-        assert isinstance(path_a, str)
-        assert isinstance(path_b, str)
+        assert isinstance(path_a, Path)
+        assert isinstance(path_b, Path)
         assert isinstance(distance, int)
         assert distance >= 0
 
