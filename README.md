@@ -165,6 +165,58 @@ hello-world-white-fg-black-fg.png ↔ hello-world-white-fg-black-fg_SHRUNK.png: 
 hello-world-white-fg-black-fg_COPY.png ↔ hello-world-white-fg-black-fg_SHRUNK.png: 14
 ```
 
+### Perceptual hash caching
+
+For maximum efficiency, you can compute and store perceptual hashes separately, then compare them later without re-loading images. This is ideal for snapshot testing or avoiding redundant hash computations:
+
+```python
+from pathlib import Path
+from czkawka import ImageSimilarity
+
+finder = ImageSimilarity()
+
+# Compute hash once and store it (e.g., in a cache, database, or file)
+original_hash = finder.hash_image(Path("source.jpg"))
+print(f"Stored hash: {original_hash}")
+
+# Later, hash a generated or new image
+generated_hash = finder.hash_image(Path("generated.jpg"))
+
+# Compare hashes without re-loading the original image
+distance = finder.compare_hashes(original_hash, generated_hash)
+
+if distance == 0:
+    print("✓ Cache hit: images are identical")
+else:
+    print(f"✗ Cache miss: images differ by {distance} bits")
+```
+
+Use cases for hash caching:
+- **Snapshot testing**: Store expected output hashes and validate generated images match
+- **Deduplication**: Build a hash database to detect duplicates without storing full images
+- **Incremental processing**: Cache hashes to avoid re-processing unchanged images
+- **Distributed systems**: Share hashes between systems without transferring image files
+
+Example workflow:
+
+```python
+>>> from pathlib import Path
+>>> from czkawka import ImageSimilarity
+>>> finder = ImageSimilarity()
+>>>
+>>> # Hash and cache multiple images
+>>> cache = {}
+>>> for img in Path("images").glob("*.png"):
+...     cache[img.name] = finder.hash_image(img)
+...
+>>> # Later, compare a new image against the cache
+>>> new_hash = finder.hash_image(Path("new_image.png"))
+>>> for name, cached_hash in cache.items():
+...     dist = finder.compare_hashes(new_hash, cached_hash)
+...     if dist == 0:
+...         print(f"Duplicate found: {name}")
+```
+
 ### API Reference
 
 - `ImageSimilarity()` - Create a new similarity finder
@@ -173,6 +225,8 @@ hello-world-white-fg-black-fg_COPY.png ↔ hello-world-white-fg-black-fg_SHRUNK.
 - `find_similar() -> list[list[Path]]` - Find groups of similar images
 - `find_similar_with_distances() -> list[list[tuple[Path, Path, int]]]` - Find groups with pairwise distances
 - `compute_distances(paths: Sequence[str | Path]) -> list[tuple[Path, Path, int]]` - Compute distances between specific images
+- `hash_image(path: str | Path) -> str` - Compute perceptual hash for a single image (returns base64 string)
+- `compare_hashes(hash1: str, hash2: str) -> int` - Compare two perceptual hashes and return Hamming distance
 
 All methods that return paths now return `pathlib.Path` objects instead of strings, providing better type safety and easier path manipulation.
 
