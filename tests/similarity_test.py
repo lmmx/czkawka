@@ -4,22 +4,11 @@ import shutil
 import tempfile
 from pathlib import Path
 
-import pytest
-
-
-@pytest.fixture
-def real_test_images():
-    """Use the actual test images directory."""
-    test_dir = Path(__file__).parent / "images"
-    if not test_dir.exists():
-        pytest.skip(f"Test images directory not found: {test_dir}")
-    return str(test_dir)
+import czkawka
 
 
 def test_real_duplicate_images(real_test_images):
     """Test finding actual duplicate images in tests/images."""
-    import czkawka
-
     finder = czkawka.ImageSimilarity()
     finder.set_directories([real_test_images])
     finder.set_similarity(1)  # Very strict - should catch exact duplicates
@@ -45,8 +34,6 @@ def test_real_duplicate_images(real_test_images):
 
 def test_similar_but_not_identical(real_test_images):
     """Test finding similar (but not identical) images."""
-    import czkawka
-
     finder = czkawka.ImageSimilarity()
     finder.set_directories([real_test_images])
     finder.set_similarity(10)  # More lenient - should catch shrunk version
@@ -59,8 +46,6 @@ def test_similar_but_not_identical(real_test_images):
 
 def test_set_directories():
     """Test setting directories."""
-    import czkawka
-
     finder = czkawka.ImageSimilarity()
     finder.set_directories(["/tmp"])
     # If it doesn't crash, it works
@@ -68,8 +53,6 @@ def test_set_directories():
 
 def test_set_similarity():
     """Test setting similarity levels."""
-    import czkawka
-
     finder = czkawka.ImageSimilarity()
     finder.set_similarity(5)
     finder.set_similarity(25)
@@ -78,8 +61,6 @@ def test_set_similarity():
 
 def test_multiple_directories(real_test_images):
     """Test searching multiple directories at once."""
-    import czkawka
-
     finder = czkawka.ImageSimilarity()
     finder.set_directories([real_test_images, real_test_images])
     results = finder.find_similar()
@@ -89,8 +70,6 @@ def test_multiple_directories(real_test_images):
 
 def test_no_results_on_empty_dir():
     """Test that empty directory returns empty results."""
-    import czkawka
-
     tmpdir = tempfile.mkdtemp()
     try:
         finder = czkawka.ImageSimilarity()
@@ -105,8 +84,6 @@ def test_no_results_on_empty_dir():
 
 def test_nonexistent_directory():
     """Test behavior with non-existent directory."""
-    import czkawka
-
     finder = czkawka.ImageSimilarity()
     finder.set_directories(["/nonexistent/path/that/does/not/exist"])
     results = finder.find_similar()

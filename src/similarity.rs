@@ -5,13 +5,13 @@ use std::sync::{Arc, atomic::AtomicBool};
 use czkawka_core::tools::similar_images::{SimilarImages, SimilarImagesParameters};
 use czkawka_core::common::traits::Search;
 use czkawka_core::common::tool_data::CommonData;
-use image_hasher::{HashAlg, FilterType};
+use image_hasher::{HashAlg, FilterType, HasherConfig};
 
 /// Python wrapper for Czkawka's image similarity detection.
 #[pyclass]
 pub struct ImageSimilarity {
     inner: SimilarImages,
-    directories: Vec<PathBuf>,  // Store directories so we can restore them
+    directories: Vec<PathBuf>, // Store directories so we can restore them
 }
 
 #[pymethods]
@@ -107,5 +107,63 @@ impl ImageSimilarity {
             .collect();
 
         Ok(py_results)
+    }
+
+    /// Find similar images and compute pairwise distances within each group.
+    ///
+    /// Returns:
+    ///     List of groups, where each group contains tuples of (path_a, path_b, hamming_distance)
+    ///     Example: [[('img1.jpg', 'img2.jpg', 0), ('img1.jpg', 'img3.jpg', 2)], [...]]
+    fn find_similar_with_distances(&mut self) -> PyResult<Vec<Vec<(String, String, u32)>>> {
+        let stop_flag = Arc::new(AtomicBool::new(false));
+        self.inner.search(&stop_flag, None);
+
+        let groups = self.inner.get_similar_images();
+        let params = self.inner.get_params();
+
+        let hasher = HasherConfig::new()
+            .hash_size(params.hash_size as u32, params.hash_size as u32)
+            .hash_alg(params.hash_alg)
+            .resize_filter(params.image_filter)
+            .to_hasher();
+
+        let mut result: Vec<Vec<(String, String, u32)>> = Vec::new();
+
+        for group in groups {
+            let mut hashes: Vec<(String, image_hasher::ImageHash)> = Vec::new();
+
+            for entry in group {
+                let path = entry.path.to_string_lossy().to_string();
+
+                match image::open(&entry.path) {
+                    Ok(img) => {
+                        let hash = hasher.hash_image(&img);
+                        hashes.push((path, hash));
+                    }
+                    Err(e) => {
+                        eprintln!("Warning: couldn't load {}: {}", path, e);
+                        continue;
+                    }
+                }
+            }
+
+            let mut pairs: Vec<(String, String, u32)> = Vec::new();
+            for i in 0..hashes.len() {
+                for j in (i + 1)..hashes.len() {
+                    let distance = hashes[i].1.dist(&hashes[j].1);
+                    pairs.push((
+                        hashes[i].0.clone(),
+                        hashes[j].0.clone(),
+                        distance,
+                    ));
+                }
+            }
+
+            if !pairs.is_empty() {
+                result.push(pairs);
+            }
+        }
+
+        Ok(result)
     }
 }
