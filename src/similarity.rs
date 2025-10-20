@@ -113,6 +113,7 @@ impl ImageSimilarity {
     ///
     /// Returns:
     ///     List of groups, where each group contains tuples of (path_a, path_b, hamming_distance)
+    ///     sorted by distance (most similar first).
     ///     Example: [[('img1.jpg', 'img2.jpg', 0), ('img1.jpg', 'img3.jpg', 2)], [...]]
     fn find_similar_with_distances(&mut self) -> PyResult<Vec<Vec<(String, String, u32)>>> {
         let stop_flag = Arc::new(AtomicBool::new(false));
@@ -120,7 +121,7 @@ impl ImageSimilarity {
 
         let groups = self.inner.get_similar_images();
         let params = self.inner.get_params();
-
+        
         let hasher = HasherConfig::new()
             .hash_size(params.hash_size as u32, params.hash_size as u32)
             .hash_alg(params.hash_alg)
@@ -131,10 +132,10 @@ impl ImageSimilarity {
 
         for group in groups {
             let mut hashes: Vec<(String, image_hasher::ImageHash)> = Vec::new();
-
+            
             for entry in group {
                 let path = entry.path.to_string_lossy().to_string();
-
+                
                 match image::open(&entry.path) {
                     Ok(img) => {
                         let hash = hasher.hash_image(&img);
@@ -158,7 +159,10 @@ impl ImageSimilarity {
                     ));
                 }
             }
-
+            
+            // Sort by distance (most similar first)
+            pairs.sort_by_key(|(_a, _b, dist)| *dist);
+            
             if !pairs.is_empty() {
                 result.push(pairs);
             }
