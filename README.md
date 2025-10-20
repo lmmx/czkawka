@@ -29,12 +29,14 @@ Finds visually similar images regardless of resolution, format, or minor differe
 ### Usage
 
 ```py
->>> from czkawka import ImageSimilarity
->>> finder = ImageSimilarity()
->>> finder.set_directories(["/path/to/images"])
->>> finder.set_similarity(15)  # 0-50, lower = stricter matching
->>> results = finder.find_similar()
-[['image1.jpg', 'image1_copy.jpg'], ['photo.png', 'photo_edited.png']]
+from czkawka import ImageSimilarity
+
+finder = ImageSimilarity()
+finder.set_directories(["/path/to/images"])
+finder.set_similarity(15)  # 0-50, lower = stricter matching
+
+results = finder.find_similar()
+# [['image1.jpg', 'image1_copy.jpg'], ['photo.png', 'photo_edited.png']]
 ```
 
 What you get are groups of similar images, e.g. using the attached data we find the copies:
@@ -45,14 +47,14 @@ What you get are groups of similar images, e.g. using the attached data we find 
 ...     finder.set_directories(["tests/images"])
 ...     finder.set_similarity(thresh)
 ...     return finder.find_similar()
-...     
->>> pprint(set_and_find(1))
+...
+>>> pprint(set_and_find(0))
 [['/home/louis/dev/czkawka/tests/images/hello-world-white-fg-black-fg.png',
   '/home/louis/dev/czkawka/tests/images/hello-world-white-fg-black-fg_COPY.jpg',
   '/home/louis/dev/czkawka/tests/images/hello-world-white-fg-black-fg_COPY.png']]
 ```
 
-Increasing the value from 1 to 100 doesn't make the first group it finds any bigger, it adds *more*
+Increasing the value from 0 to 50 doesn't make the first group it finds any bigger, it adds *more*
 groups to the results. Each inner list is a cluster of images that are similar to each other.
 
 Refer to the [Czkawka docs](https://docs.rs/czkawka_core/latest/czkawka_core/) for all available options.
