@@ -121,7 +121,7 @@ impl ImageSimilarity {
 
         let groups = self.inner.get_similar_images();
         let params = self.inner.get_params();
-        
+
         let hasher = HasherConfig::new()
             .hash_size(params.hash_size as u32, params.hash_size as u32)
             .hash_alg(params.hash_alg)
@@ -132,10 +132,10 @@ impl ImageSimilarity {
 
         for group in groups {
             let mut hashes: Vec<(String, image_hasher::ImageHash)> = Vec::new();
-            
+
             for entry in group {
                 let path = entry.path.to_string_lossy().to_string();
-                
+
                 match image::open(&entry.path) {
                     Ok(img) => {
                         let hash = hasher.hash_image(&img);
@@ -159,10 +159,10 @@ impl ImageSimilarity {
                     ));
                 }
             }
-            
+
             // Sort by distance (most similar first)
             pairs.sort_by_key(|(_a, _b, dist)| *dist);
-            
+
             if !pairs.is_empty() {
                 result.push(pairs);
             }
@@ -182,7 +182,7 @@ impl ImageSimilarity {
     ///     Example: [('img1.jpg', 'img2.jpg', 0), ('img1.jpg', 'img3.jpg', 5), ...]
     fn compute_distances(&self, paths: Vec<String>) -> PyResult<Vec<(String, String, u32)>> {
         use image_hasher::HasherConfig;
-        
+
         let params = self.inner.get_params();
         let hasher = HasherConfig::new()
             .hash_size(params.hash_size as u32, params.hash_size as u32)
@@ -192,7 +192,7 @@ impl ImageSimilarity {
 
         // Hash all provided images
         let mut hashes: Vec<(String, image_hasher::ImageHash)> = Vec::new();
-        
+
         for path_str in paths {
             let path = PathBuf::from(&path_str);
             match image::open(&path) {
@@ -220,7 +220,7 @@ impl ImageSimilarity {
                 ));
             }
         }
-        
+
         // Sort by distance (most similar first)
         pairs.sort_by_key(|(_a, _b, dist)| *dist);
 

@@ -78,7 +78,7 @@ for group in results:
         print(f"  {path_a} ↔ {path_b}: {distance} bits different")
 ```
 
-**Distance = 0** means identical perceptual hashes (perfect duplicates).  
+**Distance = 0** means identical perceptual hashes (perfect duplicates).
 **Higher distances** mean less similar images.
 
 Example:
@@ -116,7 +116,7 @@ finder = ImageSimilarity()
 
 images = [
     "photo1.jpg",
-    "photo2.jpg", 
+    "photo2.jpg",
     "photo3.jpg",
 ]
 

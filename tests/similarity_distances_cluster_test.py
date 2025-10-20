@@ -32,14 +32,14 @@ def test_find_similar_with_distances(real_test_images):
                 "hello-world-white-fg-black-fg.png" in path_a
                 and "hello-world-white-fg-black-fg_COPY.png" in path_b
             ):
-                assert (
-                    distance == 0
-                ), f"Expected exact duplicate to have distance 0, got {distance}"
+                assert distance == 0, (
+                    f"Expected exact duplicate to have distance 0, got {distance}"
+                )
                 found_exact_duplicate = True
 
-    assert (
-        found_exact_duplicate
-    ), "Expected to find exact duplicate pair with distance 0"
+    assert found_exact_duplicate, (
+        "Expected to find exact duplicate pair with distance 0"
+    )
 
 
 def test_distance_increases_with_difference(real_test_images):
