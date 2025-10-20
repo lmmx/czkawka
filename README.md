@@ -106,9 +106,10 @@ hello-world-white-fg-black-fg.png ↔ hello-world-white-fg-black-fg_COPY.png: di
 hello-world-white-fg-black-fg_COPY.jpg ↔ hello-world-white-fg-black-fg_COPY.png: distance=0
 ```
 
-### Direct distance computation between specific images
+### Hamming distances from file paths
 
 For more control, you can compute distances between specific images without running the clustering algorithm:
+
 ```python
 from czkawka import ImageSimilarity
 
@@ -133,6 +134,7 @@ This computes all pairwise distances and returns them sorted by distance (most s
 - Need fine-grained control over comparisons
 
 Example output:
+
 ```python
 >>> finder = ImageSimilarity()
 >>> images = [
@@ -162,7 +164,7 @@ Refer to the [Czkawka docs](https://docs.rs/czkawka_core/latest/czkawka_core/) f
 
 ## Benchmarks
 
-Benchmarks coming soon.
+Benchmarks to be determined... (TODO).
 
 ## Contributing
 
