@@ -170,4 +170,60 @@ impl ImageSimilarity {
 
         Ok(result)
     }
+
+    /// Compute pairwise Hamming distances between specific images.
+    ///
+    /// Args:
+    ///     paths: List of image file paths to compare
+    ///
+    /// Returns:
+    ///     List of tuples (path_a, path_b, hamming_distance) for all pairs,
+    ///     sorted by distance (most similar first).
+    ///     Example: [('img1.jpg', 'img2.jpg', 0), ('img1.jpg', 'img3.jpg', 5), ...]
+    fn compute_distances(&self, paths: Vec<String>) -> PyResult<Vec<(String, String, u32)>> {
+        use image_hasher::HasherConfig;
+        
+        let params = self.inner.get_params();
+        let hasher = HasherConfig::new()
+            .hash_size(params.hash_size as u32, params.hash_size as u32)
+            .hash_alg(params.hash_alg)
+            .resize_filter(params.image_filter)
+            .to_hasher();
+
+        // Hash all provided images
+        let mut hashes: Vec<(String, image_hasher::ImageHash)> = Vec::new();
+        
+        for path_str in paths {
+            let path = PathBuf::from(&path_str);
+            match image::open(&path) {
+                Ok(img) => {
+                    let hash = hasher.hash_image(&img);
+                    hashes.push((path_str, hash));
+                }
+                Err(e) => {
+                    return Err(PyErr::new::<pyo3::exceptions::PyIOError, _>(
+                        format!("Failed to load {}: {}", path_str, e)
+                    ));
+                }
+            }
+        }
+
+        // Compute all pairwise distances
+        let mut pairs: Vec<(String, String, u32)> = Vec::new();
+        for i in 0..hashes.len() {
+            for j in (i + 1)..hashes.len() {
+                let distance = hashes[i].1.dist(&hashes[j].1);
+                pairs.push((
+                    hashes[i].0.clone(),
+                    hashes[j].0.clone(),
+                    distance,
+                ));
+            }
+        }
+        
+        // Sort by distance (most similar first)
+        pairs.sort_by_key(|(_a, _b, dist)| *dist);
+
+        Ok(pairs)
+    }
 }
