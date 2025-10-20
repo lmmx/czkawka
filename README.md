@@ -29,28 +29,35 @@ Finds visually similar images regardless of resolution, format, or minor differe
 
 ### Image similarity clustering
 ```py
+from pathlib import Path
 from czkawka import ImageSimilarity
 
 finder = ImageSimilarity()
-finder.set_directories(["/path/to/images"])
+finder.set_directories([Path("path/to/images")])
 finder.set_similarity(15)  # 0-50, lower = stricter matching
 
 results = finder.find_similar()
-# [['image1.jpg', 'image1_copy.jpg'], ['photo.png', 'photo_edited.png']]
+# Returns groups of Path objects:
+# [[Path('image1.jpg'), Path('image1_copy.jpg')],
+#  [Path('photo.png'), Path('photo_edited.png')]]
 ```
 
 What you get are groups of similar images, e.g. using the attached data we find the copies:
 ```py
+>>> from pathlib import Path
 >>> def find_similar(thresh: int):
 ...     finder = ImageSimilarity()
-...     finder.set_directories(["tests/images"])
+...     finder.set_directories([Path("tests/images")])
 ...     finder.set_similarity(thresh)
 ...     return finder.find_similar()
 ...
->>> pprint(find_similar(0))
-[['/home/louis/dev/czkawka/tests/images/hello-world-white-fg-black-fg.png',
-  '/home/louis/dev/czkawka/tests/images/hello-world-white-fg-black-fg_COPY.jpg',
-  '/home/louis/dev/czkawka/tests/images/hello-world-white-fg-black-fg_COPY.png']]
+>>> results = find_similar(0)
+>>> for group in results:
+...     print([p.name for p in group])
+...
+['hello-world-white-fg-black-fg.png',
+ 'hello-world-white-fg-black-fg_COPY.jpg',
+ 'hello-world-white-fg-black-fg_COPY.png']
 ```
 
 Increasing the value from 0 to 50 doesn't make the first group it finds any bigger, it adds *more*
@@ -60,22 +67,25 @@ groups to the results. Each inner list is a cluster of images that are similar t
 
 You can also get **pairwise Hamming distances** between images in each cluster. The distances are bits changed between the perceptual hashes, so they are a discrete measure of distance (dissimilarity), with 0 being matching/duplicate images:
 ```python
+from pathlib import Path
 from czkawka import ImageSimilarity
 
 finder = ImageSimilarity()
-finder.set_directories(["/path/to/images"])
+finder.set_directories([Path("path/to/images")])
 finder.set_similarity(15)
 results = finder.find_similar_with_distances()
 
-# Returns: [
-#   [('img1.jpg', 'img2.jpg', 0), ('img1.jpg', 'img3.jpg', 2)],
-#   [('photo1.png', 'photo2.png', 5)]
+# Returns groups with Path objects and distances:
+# [
+#   [(Path('img1.jpg'), Path('img2.jpg'), 0),
+#    (Path('img1.jpg'), Path('img3.jpg'), 2)],
+#   [(Path('photo1.png'), Path('photo2.png'), 5)]
 # ]
 
 for group in results:
     print("Similar image group:")
     for path_a, path_b, distance in group:
-        print(f"  {path_a} ↔ {path_b}: {distance} bits different")
+        print(f"  {path_a.name} ↔ {path_b.name}: {distance} bits different")
 ```
 
 **Distance = 0** means identical perceptual hashes (perfect duplicates).
@@ -88,7 +98,7 @@ from czkawka import ImageSimilarity
 
 def find_similar_with_distances(thresh: int):
     finder = ImageSimilarity()
-    finder.set_directories(["tests/images"])
+    finder.set_directories([Path("tests/images")])
     finder.set_similarity(thresh)
     return finder.find_similar_with_distances()
 
@@ -96,7 +106,7 @@ def find_similar_with_distances(thresh: int):
 results = find_similar_with_distances(0)
 for group in results:
     for a, b, d in group:
-        print(f"{Path(a).name} ↔ {Path(b).name}: distance={d}")
+        print(f"{a.name} ↔ {b.name}: distance={d}")
 ```
 
 Output:
@@ -111,21 +121,23 @@ hello-world-white-fg-black-fg_COPY.jpg ↔ hello-world-white-fg-black-fg_COPY.pn
 For more control, you can compute distances between specific images without running the clustering algorithm:
 
 ```python
+from pathlib import Path
 from czkawka import ImageSimilarity
 
 finder = ImageSimilarity()
 
 images = [
-    "photo1.jpg",
-    "photo2.jpg",
-    "photo3.jpg",
+    Path("photo1.jpg"),
+    Path("photo2.jpg"),
+    Path("photo3.jpg"),
 ]
 
 results = finder.compute_distances(images)
-# Returns: [('photo1.jpg', 'photo2.jpg', 0), ('photo1.jpg', 'photo3.jpg', 14), ...]
+# Returns: [(Path('photo1.jpg'), Path('photo2.jpg'), 0),
+#           (Path('photo1.jpg'), Path('photo3.jpg'), 14), ...]
 
 for path_a, path_b, distance in results:
-    print(f"{path_a} ↔ {path_b}: {distance}")
+    print(f"{path_a.name} ↔ {path_b.name}: {distance}")
 ```
 
 This computes all pairwise distances and returns them sorted by distance (most similar first). This is useful when you:
@@ -136,15 +148,17 @@ This computes all pairwise distances and returns them sorted by distance (most s
 Example output:
 
 ```python
+>>> from pathlib import Path
+>>> from czkawka import ImageSimilarity
 >>> finder = ImageSimilarity()
 >>> images = [
-...     "tests/images/hello-world-white-fg-black-fg.png",
-...     "tests/images/hello-world-white-fg-black-fg_COPY.png",
-...     "tests/images/hello-world-white-fg-black-fg_SHRUNK.png",
+...     Path("tests/images/hello-world-white-fg-black-fg.png"),
+...     Path("tests/images/hello-world-white-fg-black-fg_COPY.png"),
+...     Path("tests/images/hello-world-white-fg-black-fg_SHRUNK.png"),
 ... ]
 >>> results = finder.compute_distances(images)
 >>> for a, b, d in results:
-...     print(f"{Path(a).name} ↔ {Path(b).name}: {d}")
+...     print(f"{a.name} ↔ {b.name}: {d}")
 ...
 hello-world-white-fg-black-fg.png ↔ hello-world-white-fg-black-fg_COPY.png: 0
 hello-world-white-fg-black-fg.png ↔ hello-world-white-fg-black-fg_SHRUNK.png: 14
@@ -154,11 +168,13 @@ hello-world-white-fg-black-fg_COPY.png ↔ hello-world-white-fg-black-fg_SHRUNK.
 ### API Reference
 
 - `ImageSimilarity()` - Create a new similarity finder
-- `set_directories(paths: list[str])` - Set directories to search for clustering
+- `set_directories(paths: Sequence[str | Path])` - Set directories to search for clustering (accepts strings or Path objects)
 - `set_similarity(level: int)` - Set similarity threshold (0-50, lower is stricter)
-- `find_similar() -> list[list[str]]` - Find groups of similar images
-- `find_similar_with_distances() -> list[list[tuple[str, str, int]]]` - Find groups with pairwise distances
-- `compute_distances(paths: list[str]) -> list[tuple[str, str, int]]` - Compute distances between specific images
+- `find_similar() -> list[list[Path]]` - Find groups of similar images
+- `find_similar_with_distances() -> list[list[tuple[Path, Path, int]]]` - Find groups with pairwise distances
+- `compute_distances(paths: Sequence[str | Path]) -> list[tuple[Path, Path, int]]` - Compute distances between specific images
+
+All methods that return paths now return `pathlib.Path` objects instead of strings, providing better type safety and easier path manipulation.
 
 Refer to the [Czkawka docs](https://docs.rs/czkawka_core/latest/czkawka_core/) for more details on the underlying library.
 
@@ -178,4 +194,4 @@ Maintained by [lmmx](https://github.com/lmmx). Contributions welcome!
 
 ## License
 
-Licensed under the 2-Clause BSD License. See [LICENSE](https://github.com/lmmx/czkawka/blob/master/LICENSE) for all the details.
+Licensed under the MIT License. See [LICENSE](https://github.com/lmmx/czkawka/blob/master/LICENSE).
