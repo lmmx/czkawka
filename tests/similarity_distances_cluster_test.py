@@ -19,8 +19,8 @@ def test_find_similar_with_distances(real_test_images):
     for group in results:
         assert isinstance(group, list)
         for path_a, path_b, distance in group:
-            assert isinstance(path_a, str)
-            assert isinstance(path_b, str)
+            assert isinstance(path_a, Path)
+            assert isinstance(path_b, Path)
             assert isinstance(distance, int)
             assert distance >= 0  # Hamming distance is non-negative
 
@@ -29,8 +29,8 @@ def test_find_similar_with_distances(real_test_images):
     for group in results:
         for path_a, path_b, distance in group:
             if (
-                "hello-world-white-fg-black-fg.png" in path_a
-                and "hello-world-white-fg-black-fg_COPY.png" in path_b
+                path_a.name == "hello-world-white-fg-black-fg.png"
+                and path_b.name == "hello-world-white-fg-black-fg_COPY.png"
             ):
                 assert distance == 0, (
                     f"Expected exact duplicate to have distance 0, got {distance}"
