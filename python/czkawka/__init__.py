@@ -179,3 +179,63 @@ class ImageSimilarity:
         str_paths = [str(Path(p).expanduser().resolve()) for p in paths]
         raw_results = self._inner.compute_distances(str_paths)
         return [(Path(a), Path(b), d) for a, b, d in raw_results]
+
+    def hash_image(self, path: str | Path) -> str:
+        """Compute perceptual hash for a single image.
+
+        This returns the hash as a hex string that can be stored and compared
+        later without re-hashing the image.
+
+        Parameters
+        ----------
+        path : str | Path
+            Image file path to hash
+
+        Returns
+        -------
+        str
+            Hexadecimal string representation of the perceptual hash
+
+        Raises
+        ------
+        IOError
+            If the image file cannot be loaded
+
+        Examples
+        --------
+        >>> finder = ImageSimilarity()
+        >>> hash1 = finder.hash_image(Path("photo.jpg"))
+        >>> hash2 = finder.hash_image(Path("photo_copy.jpg"))
+        >>> if hash1 == hash2:
+        ...     print("Images are identical")
+        """
+        str_path = str(Path(path).expanduser().resolve())
+        return self._inner.hash_image(str_path)
+
+    def compare_hashes(self, hash1: str, hash2: str) -> int:
+        """Compute Hamming distance between two perceptual hashes.
+
+        Parameters
+        ----------
+        hash1 : str
+            First hash (hex string from hash_image)
+        hash2 : str
+            Second hash (hex string from hash_image)
+
+        Returns
+        -------
+        int
+            Hamming distance (number of bits different)
+
+        Examples
+        --------
+        >>> finder = ImageSimilarity()
+        >>> hash1 = finder.hash_image(Path("photo.jpg"))
+        >>> hash2 = finder.hash_image(Path("photo_edited.jpg"))
+        >>> distance = finder.compare_hashes(hash1, hash2)
+        >>> if distance == 0:
+        ...     print("Exact duplicate")
+        >>> elif distance < 10:
+        ...     print("Very similar")
+        """
+        return self._inner.compare_hashes(hash1, hash2)

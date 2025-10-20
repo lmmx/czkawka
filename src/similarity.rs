@@ -5,13 +5,38 @@ use std::sync::{Arc, atomic::AtomicBool};
 use czkawka_core::tools::similar_images::{SimilarImages, SimilarImagesParameters};
 use czkawka_core::common::traits::Search;
 use czkawka_core::common::tool_data::CommonData;
-use image_hasher::{HashAlg, FilterType, HasherConfig};
+use image_hasher::{HashAlg, FilterType, HasherConfig, ImageHash};
 
 /// Python wrapper for Czkawka's image similarity detection.
 #[pyclass]
 pub struct ImageSimilarity {
     inner: SimilarImages,
-    directories: Vec<PathBuf>, // Store directories so we can restore them
+    directories: Vec<PathBuf>,
+}
+
+impl ImageSimilarity {
+    /// Create a hasher from current parameters.
+    fn create_hasher(&self) -> image_hasher::Hasher {
+        let params = self.inner.get_params();
+        HasherConfig::new()
+            .hash_size(params.hash_size as u32, params.hash_size as u32)
+            .hash_alg(params.hash_alg)
+            .resize_filter(params.image_filter)
+            .to_hasher()
+    }
+
+    /// Load and hash a single image.
+    fn load_and_hash(&self, path: &str) -> PyResult<ImageHash<Box<[u8]>>> {
+        let hasher = self.create_hasher();
+        let path_buf = PathBuf::from(path);
+
+        match image::open(&path_buf) {
+            Ok(img) => Ok(hasher.hash_image(&img)),
+            Err(e) => Err(PyErr::new::<pyo3::exceptions::PyIOError, _>(
+                format!("Failed to load {}: {}", path, e)
+            )),
+        }
+    }
 }
 
 #[pymethods]
@@ -120,18 +145,12 @@ impl ImageSimilarity {
         self.inner.search(&stop_flag, None);
 
         let groups = self.inner.get_similar_images();
-        let params = self.inner.get_params();
-
-        let hasher = HasherConfig::new()
-            .hash_size(params.hash_size as u32, params.hash_size as u32)
-            .hash_alg(params.hash_alg)
-            .resize_filter(params.image_filter)
-            .to_hasher();
+        let hasher = self.create_hasher();
 
         let mut result: Vec<Vec<(String, String, u32)>> = Vec::new();
 
         for group in groups {
-            let mut hashes: Vec<(String, image_hasher::ImageHash)> = Vec::new();
+            let mut hashes: Vec<(String, ImageHash<Box<[u8]>>)> = Vec::new();
 
             for entry in group {
                 let path = entry.path.to_string_lossy().to_string();
@@ -181,31 +200,12 @@ impl ImageSimilarity {
     ///     sorted by distance (most similar first).
     ///     Example: [('img1.jpg', 'img2.jpg', 0), ('img1.jpg', 'img3.jpg', 5), ...]
     fn compute_distances(&self, paths: Vec<String>) -> PyResult<Vec<(String, String, u32)>> {
-        use image_hasher::HasherConfig;
-
-        let params = self.inner.get_params();
-        let hasher = HasherConfig::new()
-            .hash_size(params.hash_size as u32, params.hash_size as u32)
-            .hash_alg(params.hash_alg)
-            .resize_filter(params.image_filter)
-            .to_hasher();
-
         // Hash all provided images
-        let mut hashes: Vec<(String, image_hasher::ImageHash)> = Vec::new();
+        let mut hashes: Vec<(String, ImageHash<Box<[u8]>>)> = Vec::new();
 
         for path_str in paths {
-            let path = PathBuf::from(&path_str);
-            match image::open(&path) {
-                Ok(img) => {
-                    let hash = hasher.hash_image(&img);
-                    hashes.push((path_str, hash));
-                }
-                Err(e) => {
-                    return Err(PyErr::new::<pyo3::exceptions::PyIOError, _>(
-                        format!("Failed to load {}: {}", path_str, e)
-                    ));
-                }
-            }
+            let hash = self.load_and_hash(&path_str)?;
+            hashes.push((path_str, hash));
         }
 
         // Compute all pairwise distances
@@ -223,7 +223,40 @@ impl ImageSimilarity {
 
         // Sort by distance (most similar first)
         pairs.sort_by_key(|(_a, _b, dist)| *dist);
-
         Ok(pairs)
+    }
+
+    /// Compute perceptual hash for a single image.
+    ///
+    /// Args:
+    ///     path: Path to image file
+    ///
+    /// Returns:
+    ///     Base64 string representation of the perceptual hash
+    fn hash_image(&self, path: String) -> PyResult<String> {
+        let hash = self.load_and_hash(&path)?;
+        Ok(hash.to_base64())
+    }
+
+    /// Compare two perceptual hashes and return Hamming distance.
+    ///
+    /// Args:
+    ///     hash1: First hash (base64 string from hash_image)
+    ///     hash2: Second hash (base64 string from hash_image)
+    ///
+    /// Returns:
+    ///     Hamming distance (number of bits different)
+    fn compare_hashes(&self, hash1: String, hash2: String) -> PyResult<u32> {
+        let h1 = ImageHash::<Box<[u8]>>::from_base64(&hash1)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                format!("Invalid hash1: {:?}", e)
+            ))?;
+
+        let h2 = ImageHash::<Box<[u8]>>::from_base64(&hash2)
+            .map_err(|e| PyErr::new::<pyo3::exceptions::PyValueError, _>(
+                format!("Invalid hash2: {:?}", e)
+            ))?;
+
+        Ok(h1.dist(&h2))
     }
 }
