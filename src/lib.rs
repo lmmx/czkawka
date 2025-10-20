@@ -11,23 +11,33 @@ use image_hasher::{HashAlg, FilterType};
 #[pyclass]
 struct ImageSimilarity {
     inner: SimilarImages,
+    directories: Vec<PathBuf>,  // Store directories so we can restore them
 }
 
 #[pymethods]
 impl ImageSimilarity {
     #[new]
     fn new() -> Self {
-        // Use the new API with SimilarImagesParameters - all 6 fields required
         let params = SimilarImagesParameters::new(
             10,                          // similarity threshold
             8,                           // hash_size
             HashAlg::Gradient,           // hash algorithm
             FilterType::Lanczos3,        // image filter
             false,                       // exclude_images_with_same_size
-            true,                        // ignore_hard_links
+            false,                       // ignore_hard_links
         );
+
+        let mut inner = SimilarImages::new(params);
+
+        // CRITICAL: These configurations are required for the search to work!
+        inner.set_reference_directory(vec![]);
+        inner.set_minimal_file_size(1);
+        inner.set_use_cache(false);
+        inner.set_recursive_search(true);
+
         Self {
-            inner: SimilarImages::new(params),
+            inner,
+            directories: Vec::new(),
         }
     }
 
@@ -37,6 +47,7 @@ impl ImageSimilarity {
     ///     paths: List of directory paths to scan
     fn set_directories(&mut self, paths: Vec<String>) {
         let pathbufs: Vec<PathBuf> = paths.into_iter().map(PathBuf::from).collect();
+        self.directories = pathbufs.clone();  // Store for later
         self.inner.set_included_directory(pathbufs);
     }
 
@@ -45,8 +56,10 @@ impl ImageSimilarity {
     /// Args:
     ///     level: Similarity level (0-50). Lower values are stricter.
     fn set_similarity(&mut self, level: u32) {
-        // Recreate SimilarImages with new similarity value
+        // Get old params
         let old_params = self.inner.get_params();
+
+        // Create new params with updated similarity
         let new_params = SimilarImagesParameters::new(
             level,
             old_params.hash_size,
@@ -55,7 +68,20 @@ impl ImageSimilarity {
             old_params.exclude_images_with_same_size,
             old_params.ignore_hard_links,
         );
-        self.inner = SimilarImages::new(new_params);
+
+        // Create new instance
+        let mut new_inner = SimilarImages::new(new_params);
+
+        // CRITICAL: Re-apply all the required configurations
+        new_inner.set_reference_directory(vec![]);
+        new_inner.set_minimal_file_size(1);
+        new_inner.set_use_cache(false);
+        new_inner.set_recursive_search(true);
+
+        // Restore the directories!
+        new_inner.set_included_directory(self.directories.clone());
+
+        self.inner = new_inner;
     }
 
     /// Find groups of similar images in the configured directories.
@@ -87,7 +113,6 @@ impl ImageSimilarity {
 
 #[pymodule]
 fn czkawka(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    // Expose the ImageSimilarity class
     m.add_class::<ImageSimilarity>()?;
     Ok(())
 }
