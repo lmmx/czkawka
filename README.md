@@ -29,7 +29,7 @@ Finds visually similar images regardless of resolution, format, or minor differe
 ### Usage
 
 ```py
->>> from czkawka_py import ImageSimilarity
+>>> from czkawka import ImageSimilarity
 >>> finder = ImageSimilarity()
 >>> finder.set_directories(["/path/to/images"])
 >>> finder.set_similarity(15)  # 0-50, lower = stricter matching
