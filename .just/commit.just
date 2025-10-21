@@ -36,7 +36,7 @@ commit msg *args:
     unstaged_count=$(git diff --name-only -- . ':(exclude){{NO_STASH}}' | wc -l)
     untracked_count=$(git ls-files --others --exclude-standard -- ':/*' ':(exclude){{NO_STASH}}' | wc -l)
     stash_count=$((unstaged_count + untracked_count))
-    
+
     # Files to stash: $stash_count
     if [ $stash_count -ne 0 ]; then
       case "$unstaged_count-$untracked_count" in
@@ -51,7 +51,7 @@ commit msg *args:
       ## Always restore later, even on failure
       trap 'just stash-restore $stash_count $kinds changes' EXIT
     fi
-    
+
     # Autofix run before calling commit (which triggers pre-commit hooks)
     just {{FIXER}}
 
@@ -63,6 +63,6 @@ commit msg *args:
       # Fixer modified $fixer_unstaged_count file${s:+s}, staging...
       git add --all
     fi
-    
+
     # Commit the changes
     git commit -m "{{msg}}" {{args}}
