@@ -1,5 +1,8 @@
 import ".just/commit.just"
 
+pc-fix:
+  prek run --all-files
+
 publish *args:
   $(uv python find) -m pdm publish -u __token__ -P $(keyring get PYPIRC_TOKEN "") {{args}}
 
