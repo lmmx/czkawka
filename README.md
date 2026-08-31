@@ -96,11 +96,13 @@ Example:
 from pathlib import Path
 from czkawka import ImageSimilarity
 
+
 def find_similar_with_distances(thresh: int):
     finder = ImageSimilarity()
     finder.set_directories([Path("tests/images")])
     finder.set_similarity(thresh)
     return finder.find_similar_with_distances()
+
 
 # Strict matching (distance = 0 means identical)
 results = find_similar_with_distances(0)
